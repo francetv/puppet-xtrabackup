@@ -102,7 +102,8 @@ class xtrabackup ($dbuser,              # Database username
                  ) {
 
   if ($addrepo) {
-      if ($::osfamily == 'RedHat') {
+    case $::operatingsystem {
+      'RedHat', 'CentOS': {
         yumrepo { 'percona':
           name     => 'Percona-Repository',
           descr    => 'Percona Repository',
@@ -111,9 +112,22 @@ class xtrabackup ($dbuser,              # Database username
           baseurl  => 'http://repo.percona.com/centos/$releasever/os/$basearch/',
           enabled  => '1',
         }
-      } else {
-        fail('Repository addition not supported for your distro')
       }
+      /^(Debian|Ubuntu)$/:{
+        apt::key { 'CD2EFD2A' :
+          keyserver => 'hkp://zimmerman.mayfirst.org',
+        }
+
+        apt::repository { 'percona' :
+          url         => 'http://repo.percona.com/apt',
+          distro      => $::lsbdistcodename,
+          repository  => 'main',
+          require     => Apt::Key['CD2EFD2A'],
+          source      => true,
+        }
+      }
+      default:            { fail('Repository addition not supported for your distro') } # apply the generic class
+    }
   }
 
   if ($install_20) {
